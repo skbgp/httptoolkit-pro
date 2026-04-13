@@ -1,0 +1,40 @@
+name: Build HTTP Toolkit (Mac Silicon)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build for Apple Silicon (arm64)
+        run: |
+          # The desktop repo expects this version format
+          export CSC_IDENTITY_AUTO_DISCOVERY=false
+          npm run build:src
+          npm run build:cli
+          npm run server:setup
+          npx electron-builder build --mac dmg --arm64 -c.mac.identity=null
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HTTP-Toolkit-Mac-Silicon
+          path: dist/*.dmg

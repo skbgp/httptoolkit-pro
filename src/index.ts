@@ -250,6 +250,27 @@ if (!amMainInstance) {
             // gets replaced on first navigation (immediately), whilst global
             // vars like this are forever.
             injectValue('httpToolkitAuthToken', AUTH_TOKEN);
+
+            contents.executeJavaScript(`
+                const _origFetch = window.fetch;
+                window.fetch = async function(...args) {
+                    const url = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : "");
+                    if (url && url.includes('accounts.httptoolkit.tech')) {
+                        try {
+                            const origRes = await _origFetch.apply(this, args);
+                            if (origRes.ok && url.includes('user')) {
+                                let data = await origRes.clone().json();
+                                data.subscription = { status: 'active', expiry: '2099-01-01T00:00:00.000Z', plan: 'pro-annual', canManageSubscription: false };
+                                return new Response(JSON.stringify(data), { status: 200, headers: origRes.headers });
+                            }
+                            return origRes;
+                        } catch (e) {
+                            return _origFetch.apply(this, args);
+                        }
+                    }
+                    return _origFetch.apply(this, args);
+                };
+            `);
         });
 
         // Redirect all navigations & new windows to the system browser
