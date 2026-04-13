@@ -29,9 +29,10 @@ jobs:
           npm run build:src
           npm run build:cli
           npm run server:setup
-          npx electron-builder build --mac dmg --arm64 -c.mac.identity=null -c.mac.forceCodeSigning=false
+          npx electron-builder build --mac dmg --arm64 -c.mac.identity=null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLE_SIGNING: 'false'
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

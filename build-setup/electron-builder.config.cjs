@@ -7,7 +7,6 @@ const unsignedMode = process.env.ENABLE_SIGNING !== 'true';
 
 const config = packageJson.build;
 
-if (unsignedMode) {
   console.log('\nBuilding in UNSIGNED mode\n');
 
   // Make it abundantly clear in the output that the builds aren't signed, so
@@ -28,8 +27,5 @@ if (unsignedMode) {
   config.mac.notarize = false;
   config.win.forceCodeSigning = false;
   process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
-} else {
-  console.log('\nBuilding in SIGNED mode\n');
-}
 
 module.exports = config;
