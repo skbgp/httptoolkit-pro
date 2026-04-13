@@ -29,7 +29,7 @@ jobs:
           npm run build:src
           npm run build:cli
           npm run server:setup
-          npx electron-builder build --mac dmg --arm64 -c.mac.identity=null
+          npx electron-builder build --mac dmg --arm64 -c.mac.identity=null -c.mac.forceCodeSigning=false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
