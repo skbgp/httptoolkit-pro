@@ -251,26 +251,39 @@ if (!amMainInstance) {
             // vars like this are forever.
             injectValue('httpToolkitAuthToken', AUTH_TOKEN);
 
-            contents.executeJavaScript(`
-                const _origFetch = window.fetch;
-                window.fetch = async function(...args) {
-                    const url = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : "");
-                    if (url && url.includes('accounts.httptoolkit.tech')) {
-                        try {
-                            const origRes = await _origFetch.apply(this, args);
-                            if (origRes.ok && url.includes('user')) {
-                                let data = await origRes.clone().json();
-                                data.subscription = { status: 'active', expiry: '2099-01-01T00:00:00.000Z', plan: 'pro-annual', canManageSubscription: false };
-                                return new Response(JSON.stringify(data), { status: 200, headers: origRes.headers });
-                            }
-                            return origRes;
-                        } catch (e) {
-                            return _origFetch.apply(this, args);
-                        }
-                    }
-                    return _origFetch.apply(this, args);
-                };
-            `);
+            const executeJS = `
+            const _origVerify = window.crypto.subtle.verify;
+            window.crypto.subtle.verify = async function(...args) { return true; };
+
+            const toB64Url = (str) => window.btoa(str).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');
+            const header = toB64Url(JSON.stringify({alg: 'RS256', typ: 'JWT'}));
+            const payload = toB64Url(JSON.stringify({
+              user_id: 'pro',
+              email: 'pro@pro.com',
+              subscription_status: 'active',
+              subscription_sku: 'pro-annual',
+              subscription_expiry: '2099-01-01T00:00:00.000Z',
+              feature_flags: [],
+              banned: false,
+              exp: 4070908800,
+              aud: 'https://httptoolkit.tech/app_data',
+              iss: 'https://httptoolkit.tech/'
+            }));
+            const fakeJwt = header + '.' + payload + '.fakesig';
+
+            const _origFetch = window.fetch;
+            window.fetch = async function(...args) {
+                const url = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : "");
+                if (url && url.includes('accounts.httptoolkit.tech') && url.includes('get-app-data')) {
+                    return new Response(fakeJwt, { status: 200 });
+                }
+                return _origFetch.apply(this, args);
+            };
+
+            localStorage.setItem('tokens', JSON.stringify({ accessToken: "fake", refreshToken: "fake", accessTokenExpiry: 4070908800000 }));
+            localStorage.setItem('last_jwt', fakeJwt);
+        `;
+        contents.executeJavaScript(executeJS);
         });
 
         // Redirect all navigations & new windows to the system browser
